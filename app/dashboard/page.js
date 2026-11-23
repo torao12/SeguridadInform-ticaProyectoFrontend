@@ -24,14 +24,14 @@ export default function Dashboard() {
 
   const logout = () => {
     localStorage.removeItem("jwt_token");
-    router.push("/login");
+    router.replace("/");
   };
 
   const resetDemo = async () => {
     if (!window.confirm("¿Limpiar las alertas y los registros de auditoría de esta demo?")) return;
     const token = localStorage.getItem("jwt_token");
     if (!token) {
-      router.push("/login");
+      router.replace("/");
       return;
     }
     try {
@@ -39,61 +39,94 @@ export default function Dashboard() {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (response.status === 401 || response.status === 403) {
+      if (response.status === 401) {
         localStorage.removeItem("jwt_token");
-        router.push("/login");
+        router.replace("/");
         return;
       }
-      if (!response.ok) throw new Error("No se pudo limpiar la telemetría.");
+      if (!response.ok) {
+        setApiError(response.status >= 500
+          ? `El backend respondió con HTTP ${response.status}. La vista sigue activa; vuelve a intentar en unos segundos.`
+          : `No se pudo limpiar la telemetría (HTTP ${response.status}).`);
+        return;
+      }
+      setApiError("");
       setAlerts([]);
       setAuditLogs([]);
     } catch (error) {
       console.error("Error limpiando la demo", error);
-      window.alert("No se pudo limpiar la demo. Inténtalo de nuevo.");
+      setApiError("No se pudo conectar con el backend para limpiar la demo. La vista sigue activa; inténtalo de nuevo en unos segundos.");
     }
   };
 
   useEffect(() => {
+    let isActive = true;
+    let isFetching = false;
+    let activeController;
+
     const fetchData = async () => {
+      if (!isActive || isFetching) return;
+      isFetching = true;
       try {
         const token = localStorage.getItem("jwt_token");
         if (!token) {
-          router.push("/login");
+          router.replace("/");
           return;
         }
 
         const headers = { Authorization: `Bearer ${token}` };
+        activeController = new AbortController();
+        const timeoutId = setTimeout(() => activeController.abort(), 30000);
+        let resAlerts;
+        let resAudit;
+        try {
+          [resAlerts, resAudit] = await Promise.all([
+            fetch(`${API_URL}/api/alerts`, { headers, signal: activeController.signal }),
+            fetch(`${API_URL}/api/audit`, { headers, signal: activeController.signal })
+          ]);
+        } finally {
+          clearTimeout(timeoutId);
+        }
 
-        // Llamadas simultáneas a Alertas y Auditoría
-        const [resAlerts, resAudit] = await Promise.all([
-          fetch(`${API_URL}/api/alerts`, { headers }),
-          fetch(`${API_URL}/api/audit`, { headers })
-        ]);
-        
+        if (!isActive) return;
         if (resAlerts.ok && resAudit.ok) {
+          const [alertsData, auditData] = await Promise.all([resAlerts.json(), resAudit.json()]);
+          if (!isActive) return;
           setApiError("");
-          setAlerts(await resAlerts.json());
-          setAuditLogs(await resAudit.json());
-        } else if ([resAlerts.status, resAudit.status].some((status) => status === 401 || status === 403)) {
+          setAlerts(alertsData);
+          setAuditLogs(auditData);
+        } else if ([resAlerts.status, resAudit.status].includes(401)) {
           localStorage.removeItem("jwt_token");
-          router.push("/login");
+          router.replace("/");
+        } else if ([resAlerts.status, resAudit.status].includes(403)) {
+          setApiError("El backend rechazo la solicitud (403). La sesion se conserva; revisa la autorizacion o el WAF.");
         } else {
           const status = !resAlerts.ok ? resAlerts.status : resAudit.status;
-          setApiError(status === 429
-            ? "Demasiadas solicitudes. Espera un momento y vuelve a intentarlo."
-            : status >= 500
-              ? "La API tuvo un error al cargar la telemetria. Intentalo de nuevo en unos segundos."
+          setApiError(status >= 500
+            ? `El backend respondio con HTTP ${status}. La vista sigue activa y se reintentara automaticamente.`
+            : status === 429
+              ? "Demasiadas solicitudes. Espera un momento; se reintentara automaticamente."
               : `No se pudo cargar la telemetria (HTTP ${status}).`);
         }
       } catch (error) {
         console.error("Error fetching data", error);
-        setApiError(`No se pudo conectar con la API (${API_URL}). Comprueba la URL y la disponibilidad del backend.`);
+        if (isActive) {
+          setApiError(error.name === "AbortError"
+            ? "La API tardo mas de 30 segundos en responder. La vista sigue activa y se reintentara automaticamente."
+            : `No se pudo conectar con la API (${API_URL}). La vista sigue activa y se reintentara automaticamente.`);
+        }
+      } finally {
+        isFetching = false;
       }
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 3000); // Refresco en vivo
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchData, 3000);
+    return () => {
+      isActive = false;
+      clearInterval(interval);
+      activeController?.abort();
+    };
   }, [router]);
 
   // Cálculos para KPIs (basados en alertas)
