@@ -2,34 +2,54 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/+$/, "");
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+    setIsSubmitting(true);
     try {
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password })
       });
-      
-      const data = await res.json();
-      
-      if (res.ok) {
-        localStorage.setItem("jwt_token", data.token); // Clave exacta
-        router.push("/dashboard");
-      } else {
-        setError(data.error || "Credenciales inválidas");
+
+      let data = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
       }
-    } catch (err) {
-      setError("Error de conexión con el servidor SIEM.");
+
+      if (res.ok) {
+        if (!data.token) {
+          setError("El servidor respondio sin un token de sesion.");
+          return;
+        }
+        localStorage.setItem("jwt_token", data.token);
+        router.push("/dashboard");
+      } else if (res.status === 401) {
+        setError(data.error || "El usuario o la contrasena son incorrectos.");
+      } else if (res.status === 429) {
+        const retryAfter = res.headers.get("Retry-After");
+        setError(data.error || `Demasiados intentos. Espera ${retryAfter || "unos minutos"} antes de volver a intentarlo.`);
+      } else if (res.status >= 500) {
+        setError(data.error || "El servicio de autenticacion fallo. Intentalo de nuevo mas tarde.");
+      } else {
+        setError(data.error || `No se pudo iniciar sesion (HTTP ${res.status}).`);
+      }
+    } catch {
+      setError(`No se pudo conectar con ${API_URL}. Comprueba NEXT_PUBLIC_API_URL, CORS y que Render tenga el backend disponible.`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -69,10 +89,11 @@ export default function Login() {
           </div>
           
           <button 
-            type="submit" 
-            className="w-full bg-gradient-to-r from-teal-600 to-sky-600 hover:from-teal-500 hover:to-sky-500 text-white p-3 rounded-lg font-bold shadow-lg shadow-teal-900/20 transition-all transform hover:scale-[1.02]"
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-gradient-to-r from-teal-600 to-sky-600 hover:from-teal-500 hover:to-sky-500 disabled:cursor-wait disabled:opacity-60 text-white p-3 rounded-lg font-bold shadow-lg shadow-teal-900/20 transition-all transform hover:scale-[1.02]"
           >
-            Acceder al Sistema
+            {isSubmitting ? "Conectando..." : "Acceder al Sistema"}
           </button>
         </div>
         

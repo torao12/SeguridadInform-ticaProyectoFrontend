@@ -2,11 +2,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/+$/, "");
 
 export default function Dashboard() {
   const [alerts, setAlerts] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
+  const [apiError, setApiError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("alerts"); // 'alerts' o 'audit'
   const router = useRouter();
@@ -70,14 +71,23 @@ export default function Dashboard() {
         ]);
         
         if (resAlerts.ok && resAudit.ok) {
+          setApiError("");
           setAlerts(await resAlerts.json());
           setAuditLogs(await resAudit.json());
-        } else if (resAlerts.status === 401 || resAlerts.status === 403) {
+        } else if ([resAlerts.status, resAudit.status].some((status) => status === 401 || status === 403)) {
           localStorage.removeItem("jwt_token");
           router.push("/login");
+        } else {
+          const status = !resAlerts.ok ? resAlerts.status : resAudit.status;
+          setApiError(status === 429
+            ? "Demasiadas solicitudes. Espera un momento y vuelve a intentarlo."
+            : status >= 500
+              ? "La API tuvo un error al cargar la telemetria. Intentalo de nuevo en unos segundos."
+              : `No se pudo cargar la telemetria (HTTP ${status}).`);
         }
       } catch (error) {
         console.error("Error fetching data", error);
+        setApiError(`No se pudo conectar con la API (${API_URL}). Comprueba la URL y la disponibilidad del backend.`);
       }
     };
 
@@ -128,6 +138,12 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Widgets (Solo visibles en pestaña de Alertas para no saturar) */}
+      {apiError && (
+        <div role="alert" className="mb-6 rounded-lg border border-red-800 bg-red-900/30 p-4 text-sm text-red-300">
+          {apiError}
+        </div>
+      )}
+
       {activeTab === "alerts" && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-slate-900/80 p-6 rounded-xl border border-slate-800 shadow-lg border-t-4 border-t-sky-500">
