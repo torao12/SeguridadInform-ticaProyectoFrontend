@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
 export default function Dashboard() {
   const [alerts, setAlerts] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
@@ -32,7 +34,7 @@ export default function Dashboard() {
       return;
     }
     try {
-      const response = await fetch("http://localhost:3001/api/telemetry/reset", {
+      const response = await fetch(`${API_URL}/api/telemetry/reset`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -63,8 +65,8 @@ export default function Dashboard() {
 
         // Llamadas simultáneas a Alertas y Auditoría
         const [resAlerts, resAudit] = await Promise.all([
-          fetch("http://localhost:3001/api/alerts", { headers }),
-          fetch("http://localhost:3001/api/audit", { headers })
+          fetch(`${API_URL}/api/alerts`, { headers }),
+          fetch(`${API_URL}/api/audit`, { headers })
         ]);
         
         if (resAlerts.ok && resAudit.ok) {
