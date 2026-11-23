@@ -21,7 +21,7 @@ export default function Login() {
       const data = await res.json();
       
       if (res.ok) {
-        localStorage.setItem("jwt_token", data.token);
+        localStorage.setItem("jwt_token", data.token); // Clave exacta
         router.push("/dashboard");
       } else {
         setError(data.error || "Credenciales inválidas");
