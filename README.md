@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# NetSentinel — Frontend SOC Dashboard
 
-## Getting Started
+![Logo de NetSentinel](logo.png)
 
-First, run the development server:
+Interfaz web de monitoreo de seguridad (**SIEM / SOC**) para **NetSentinel**, desarrollada con **Next.js (App Router)** y **Tailwind CSS**, desplegada en **Vercel** y conectada a la API segura en **Render** con persistencia en **PostgreSQL (Neon)**.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Enlaces y Despliegue
+- **Aplicación Web (Vercel):** https://seguridad-inform-tica-proyecto-fron.vercel.app
+- **API Backend (Render):** https://seguridadinform-ticaproyectobackend.onrender.com
+- **Repositorio Backend:** https://github.com/torao12/SeguridadInform-ticaProyectoBackend
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Funcionalidades del Panel SOC
+- **Inicio de sesión con JWT:** Autenticación contra `/api/auth/login` con manejo visual de respuestas de error (`401`, `429`, `500`, `503`) y prevención de envíos duplicados.
+- **Monitoreo en tiempo real:** Consulta periódica cada 3 segundos a los endpoints protegidos con `Bearer Token` usando `NEXT_PUBLIC_API_URL`.
+- **KPIs y alertas WAF:** Visualización de eventos totales, amenazas críticas, riesgo alto, buscador/filtros y detalle de bloqueos (`SQLi`, `XSS`, `Path Traversal / LFI`, bots).
+- **Auditoría de accesos (`audit_logs`):** Registro de inicios de sesión exitosos (`SUCCESS`) y fallidos (`FAILED`) con IP de origen y marca de tiempo.
+- **Control de demostración:** Reinicio controlado de telemetría desde la interfaz (`DELETE /api/telemetry/reset`).
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Vista Previa
+![Vista previa de NetSentinel](preview.png)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Ejecución Local
+1. Instala dependencias con `npm install`.
+2. Configura `NEXT_PUBLIC_API_URL` (por ejemplo, `http://localhost:3001`).
+3. Inicia el servidor con `npm run dev` en `http://localhost:3000`.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Contexto Académico
+- **Estudiante:** Ian Mauricio Morales Montejo (Matrícula: 243737)
+- **Programa:** Ingeniería en Tecnologías de la Información e Innovación Digital — Grupo 7B
+- **Asignatura:** Seguridad Informática (Periodo 263) — Universidad Politécnica de Chiapas
+- **Docente:** M.C. José Alonso Macías Montoya
