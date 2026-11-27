@@ -19,7 +19,7 @@ export default function Login() {
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username: username.trim(), password })
       });
 
       let data = {};
@@ -71,6 +71,7 @@ export default function Login() {
             <input 
               type="text" 
               required
+                maxLength={100}
               className="w-full p-3 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors" 
               value={username} 
               onChange={e => setUsername(e.target.value)} 
@@ -82,6 +83,7 @@ export default function Login() {
             <input 
               type="password" 
               required
+                maxLength={128}
               className="w-full p-3 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors" 
               value={password} 
               onChange={e => setPassword(e.target.value)} 

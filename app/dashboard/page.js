@@ -45,7 +45,11 @@ export default function Dashboard() {
         return;
       }
       if (!response.ok) {
-        setApiError(response.status >= 500
+          if (response.status === 403) {
+            setApiError("No tienes permisos de administrador para limpiar la telemetría (HTTP 403).");
+            return;
+          }
+          setApiError(response.status >= 500
           ? `El backend respondió con HTTP ${response.status}. La vista sigue activa; vuelve a intentar en unos segundos.`
           : `No se pudo limpiar la telemetría (HTTP ${response.status}).`);
         return;
@@ -250,7 +254,7 @@ export default function Dashboard() {
                 </tr>
               ) : (
                 filteredAlerts.map((alert, index) => (
-                  <tr key={index} className="transition-all duration-200 hover:bg-slate-800/80">
+                  <tr key={alert.id ?? `${alert.detected_at || alert.created_at || ''}-${alert.source_ip || ''}-${index}`} className="transition-all duration-200 hover:bg-slate-800/80">
                     <td className="px-6 py-4 font-bold">
                       <span className={`px-3 py-1 rounded-full border text-[11px] uppercase tracking-wider ${
                         alert.severity === "CRITICAL" ? "border-red-500/50 text-red-400 bg-red-500/10" :
@@ -294,7 +298,7 @@ export default function Dashboard() {
                 </tr>
               ) : (
                 filteredAudit.map((log, index) => (
-                  <tr key={index} className="transition-all duration-200 hover:bg-slate-800/80">
+                  <tr key={log.id ?? `${log.detected_at || log.created_at || ''}-${log.username || ''}-${index}`} className="transition-all duration-200 hover:bg-slate-800/80">
                     <td className="px-6 py-4 font-mono text-slate-400 text-xs">#{log.id}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-400">{formatDateTime(log.detected_at || log.created_at)}</td>
                     <td className="px-6 py-4 font-medium text-sky-400">{log.username || "Desconocido"}</td>
